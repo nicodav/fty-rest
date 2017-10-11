@@ -53,59 +53,59 @@ typedef std::function<void(const tntdb::Row&)> row_cb_f ;
 
 template <typename T>
 struct db_reply{
-    int status; // ok/fail
-    int errtype;
-    int errsubtype;
-    uint64_t rowid;  // insert/update or http error code if status == 0
-    uint64_t affected_rows; // for update/insert/delete
-    std::string msg;
-    zhash_t *addinfo;
-    T item;
+int status; // ok/fail
+int errtype;
+int errsubtype;
+uint64_t rowid;  // insert/update or http error code if status == 0
+uint64_t affected_rows; // for update/insert/delete
+std::string msg;
+zhash_t *addinfo;
+T item;
 };
 
 typedef db_reply<uint64_t> db_reply_t;
 
 inline db_reply_t db_reply_new() {
-    return db_reply_t {
-        .status = 1,
-        .errtype = 0,
-        .errsubtype = 0,
-        .rowid = 0,
-        .affected_rows = 0,
-        .msg = "",
-        .addinfo = NULL,
-        .item = 0};
+return db_reply_t {
+    .status = 1,
+    .errtype = 0,
+    .errsubtype = 0,
+    .rowid = 0,
+    .affected_rows = 0,
+    .msg = "",
+    .addinfo = NULL,
+    .item = 0};
 }
 
 template <typename T>
 inline db_reply<T> db_reply_new(T& item) {
-    return db_reply<T> {
-        .status = 1,
-        .errtype = 0,
-        .errsubtype = 0,
-        .rowid = 0,
-        .affected_rows = 0,
-        .msg = "",
-        .addinfo = NULL,
-        .item = item};
+return db_reply<T> {
+    .status = 1,
+    .errtype = 0,
+    .errsubtype = 0,
+    .rowid = 0,
+    .affected_rows = 0,
+    .msg = "",
+    .addinfo = NULL,
+    .item = item};
 }
 
 /**
- * \brief helper structure for results of v_bios_measurement
- */
+* \brief helper structure for results of v_bios_measurement
+*/
 struct db_msrmnt_t {
-    m_msrmnt_id_t id;
-    time_t timestamp;
-    m_msrmnt_value_t value;
-    m_msrmnt_scale_t scale;
-    m_msrmnt_id_t device_id;
-    std::string units;
-    std::string topic;
+m_msrmnt_id_t id;
+time_t timestamp;
+m_msrmnt_value_t value;
+m_msrmnt_scale_t scale;
+m_msrmnt_id_t device_id;
+std::string units;
+std::string topic;
 };
 
 /**
- * \brief helper structure for results of v_bios_asset_element
- */
+* \brief helper structure for results of v_bios_asset_element
+*/
 struct db_a_elmnt_t {
     a_elmnt_id_t     id;
     std::string      name;
