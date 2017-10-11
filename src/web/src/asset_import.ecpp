@@ -120,6 +120,7 @@ try{
     // this code can be executed in multiple threads -> agent's name should
     // be unique at the every moment
     std::string agent_name = utils::generate_mlm_client_id("web.asset_import");
+
     send_configure (okRows, agent_name);
 </%cpp>
 {
