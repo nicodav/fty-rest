@@ -323,7 +323,7 @@ libpriv_utils_la_SOURCES = 	\
 			src/include/topology2.h \
 			src/db/topology2.cc
 
-libpriv_utils_la_LDFLAGS = ${CXXTOOLS_LIBS} -ltntdb ${LIBCZMQ_LIBS} ${LIBMLM_LIBS}
+libpriv_utils_la_LDFLAGS = ${CXXTOOLS_LIBS} -ltntdb ${LIBCZMQ_LIBS}
 
 libpriv_utils_la_CPPFLAGS =$(AM_CPPFLAGS) \
                     -I$(abs_top_srcdir)/src/persist \
