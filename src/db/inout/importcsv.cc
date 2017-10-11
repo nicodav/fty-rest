@@ -42,7 +42,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "utils.h"
 #include "utils++.h"
 #include "utils_web.h"
-#include "tntmlm.h"
 
 using namespace shared;
 
@@ -143,167 +142,6 @@ sanitize_value_double(
     }
 }
 
-
-/*
- * \brief Identify id of row with rackcontroller-0
- * \return SIZE_MAX when RC-0 not found
- * \return size_t number of RC-0 row
- * \throw runtime_error on failure
- */
-size_t
-promote_rc0(
-         const CsvMap& cm,
-         touch_cb_t touch_fn) {
-    touch_fn(); // renew request watchdog timer
-    // first find all rows with rackcontrollers
-    std::vector<size_t> rc_rows;
-    for (size_t row_i = 1; row_i != cm.rows(); row_i++) {
-        auto iname = cm.get(row_i, "id");
-        if (iname.compare(0, strlen("rackcontroller-"), "rackcontroller-")) {
-            rc_rows.push_back(row_i);
-        }
-    }
-    if (0 == rc_rows.size()) {
-        return SIZE_MAX;
-    }
-    touch_fn(); // renew request watchdog timer
-
-    MlmClient client;
-    // ask for data about myself
-    zuuid_t *uuid = zuuid_new ();
-    zmsg_t *msg = zmsg_new ();
-    zmsg_addstr (msg, "INFO");
-    zmsg_addstr (msg, zuuid_str_canonical (uuid));
-    if (-1 == client.sendto ("fty-info", "info", 1000, &msg)) {
-        zuuid_destroy (&uuid);
-        throw std::runtime_error("Sending INFO message to fty-info failed");
-    }
-    touch_fn(); // renew request watchdog timer
-    // parse receieved data
-    zmsg_t *resp = client.recv (zuuid_str_canonical (uuid), 5);
-    touch_fn(); // renew request watchdog timer
-    if (NULL == resp) {
-        zuuid_destroy (&uuid);
-        throw std::runtime_error("Response on INFO message from fty-info is empty");
-    }
-    char *command = zmsg_popstr (resp); // we don't really need those, but we need to popstr them
-    char *srv_name  = zmsg_popstr (resp);
-    char *srv_type  = zmsg_popstr (resp);
-    char *srv_stype = zmsg_popstr (resp);
-    char *srv_port  = zmsg_popstr (resp);
-    zframe_t *frame_infos = zmsg_next (resp);
-    zhash_t *info = zhash_unpack(frame_infos); // serial, hostname, ip.[1-3]
-    zstr_free (&command);
-    zstr_free(&srv_name);
-    zstr_free(&srv_type);
-    zstr_free(&srv_stype);
-    zstr_free(&srv_port);
-    //zhash_destroy(&info);
-    zmsg_destroy(&resp);
-    char *ip1 = (char *)zhash_lookup(info, "ip.1");
-    char *ip2 = (char *)zhash_lookup(info, "ip.2");
-    char *ip3 = (char *)zhash_lookup(info, "ip.3");
-    char *serial = (char *)zhash_lookup(info, "serial");
-    char *hostname = (char *)zhash_lookup(info, "hostname");
-
-    touch_fn(); // renew request watchdog timer
-    // get list of rackcontrollers already in database
-    msg = zmsg_new ();
-    zmsg_addstr (msg, "GET");
-    zmsg_addstr (msg, "rackcontroller");
-    int rv = client.sendto ("asset-agent", "ASSETS", 5000, &msg);
-    touch_fn(); // renew request watchdog timer
-    if (rv != 0) {
-        zhash_destroy(&info);
-        throw std::runtime_error("Request for rackcontroller list failed");
-    }
-    resp = client.recv (zuuid_str_canonical (uuid), 5);
-    touch_fn(); // renew request watchdog timer
-    char *asset = zmsg_popstr(resp);
-    std::vector<char *> rackcontrollers;
-    while (asset) {
-        rackcontrollers.push_back(asset);
-        asset = zmsg_popstr(resp);
-    }
-    zmsg_destroy (&resp);
-
-    touch_fn(); // renew request watchdog timer
-    // check how many RCs we already have in database
-    if (0 == rackcontrollers.size()) {
-        // as discussed with Arno, there are no options, one must be picked
-        // nothing to do, promote first RC suitable to RC-0
-        if (1 == rc_rows.size()) {
-            zhash_destroy(&info);
-            return rc_rows[0];
-        }
-        // check for rackcontroller-0 first
-        for (size_t row_i : rc_rows) {
-            auto iname = cm.get(row_i, "id");
-            if ("rackcontroller-0" == iname) {
-                zhash_destroy(&info);
-                return row_i;
-            }
-        }
-        // then check ip address
-        for (size_t row_i : rc_rows) {
-            auto ip = cm.get(row_i, "ip.1");
-            if (ip == ip1 || ip == ip2 || ip == ip3) {
-                zhash_destroy(&info);
-                return row_i;
-            }
-        }
-        // sadly uuid isn't part of import csv
-        // then check serial number
-        for (size_t row_i : rc_rows) {
-            auto s_no = cm.get(row_i, "serial_no");
-            if (serial == s_no ) {
-                zhash_destroy(&info);
-                return row_i;
-            }
-        }
-        // then check hostname
-        for (size_t row_i : rc_rows) {
-            auto hname = cm.get(row_i, "hostname.1");
-            if (hostname == hname ) {
-                zhash_destroy(&info);
-                return row_i;
-            }
-        }
-        // then check hostname
-        for (size_t row_i : rc_rows) {
-            auto hname = cm.get(row_i, "hostname.1");
-            if (hostname == hname ) {
-                zhash_destroy(&info);
-                return row_i;
-            }
-        }
-        // we're out of options, take first available
-        zhash_destroy(&info);
-        return rc_rows[0];
-    }
-    else {
-        // as discussed with Arno, if IP match my IP, this is probably replacement, otherwise it's import
-        for (size_t row_i : rc_rows) {
-            auto ip = cm.get(row_i, "ip.1");
-            if (ip == ip1 || ip == ip2 || ip == ip3) {
-                zhash_destroy(&info);
-                return row_i;
-            }
-        }
-        for (size_t row_i : rc_rows) {
-            auto iname = cm.get(row_i, "id");
-            auto s_no = cm.get(row_i, "serial_no");
-            if ("rackcontroller-0" == iname && serial == s_no ) {
-                zhash_destroy(&info);
-                return row_i;
-            }
-        }
-        zhash_destroy(&info);
-        return SIZE_MAX;
-    }
-}
-
-
 /*
  * \brief Replace user defined names with internal names
  */
@@ -370,8 +208,7 @@ static std::pair<db_a_elmnt_t, persist::asset_operation>
          const std::map<std::string,int> &TYPES,
          const std::map<std::string,int> &SUBTYPES,
          std::set<a_elmnt_id_t> &ids,
-         bool sanitize,
-         size_t rc_0
+         bool sanitize
          )
 {
     LOG_START;
@@ -394,13 +231,6 @@ static std::pair<db_a_elmnt_t, persist::asset_operation>
 
     // because id is definitely not an external attribute
     auto id_str = unused_columns.count("id") ? cm.get(row_i, "id") : "";
-    if ("rackcontroller-0" == id_str && rc_0 == SIZE_MAX ) {
-        // we got RC-0 but it don't match "myself", change it to something else ("")
-        id_str = "";
-    } else if (rc_0 == row_i && id_str != "rackcontroller-0") {
-        id_str = "rackcontroller-0";
-    }
-
     unused_columns.erase("id");
     persist::asset_operation operation = persist::asset_operation::INSERT;
     int64_t id = 0;
@@ -989,12 +819,7 @@ std::pair<db_a_elmnt_t, persist::asset_operation>
         bios_throw("internal-error", msg.c_str());
 
     std::set<a_elmnt_id_t> ids{};
-    size_t rc_0 = SIZE_MAX;
-    auto iname = cm.get(1, "id");
-    if ("rackcontroller-0" == iname) {
-        rc_0 = 1;
-    }
-    auto ret = process_row(conn, cm, 1, TYPES, SUBTYPES, ids, true, rc_0);
+    auto ret = process_row(conn, cm, 1, TYPES, SUBTYPES, ids, true);
     LOG_END;
     return ret;
 }
@@ -1043,9 +868,6 @@ void
     // BIOS-2506
     std::set<a_elmnt_id_t> ids{};
 
-    // if there are rackcontroller in the import, promote one of it to rackcontroller-0 if not done already
-    size_t rc0 = promote_rc0(cm, touch_fn);
-
     std::set<size_t> processedRows;
     bool somethingProcessed;
     do {
@@ -1054,7 +876,7 @@ void
         for (size_t row_i = 1; row_i != cm.rows(); row_i++) {
             if (processedRows.find (row_i) != processedRows.end ()) continue;
             try{
-                auto ret = process_row(conn, cm, row_i, TYPES, SUBTYPES, ids, true, rc0);
+                auto ret = process_row(conn, cm, row_i, TYPES, SUBTYPES, ids, true);
                 touch_fn ();
                 okRows.push_back (ret);
                 log_info ("row %zu was imported successfully", row_i);

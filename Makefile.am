@@ -514,7 +514,7 @@ test_csv_CPPFLAGS =		$(AM_CPPFLAGS) \
 			-I$(abs_top_srcdir)/src/msg \
 			-I$(abs_top_srcdir)/tests/include
 
-test_csv_LDFLAGS =		${CXXTOOLS_LIBS}  -ltntdb ${LIBMLM_LIBS} 
+test_csv_LDFLAGS =		${CXXTOOLS_LIBS}  -ltntdb
 
 #----------------------------------------------------------------------
 #                        CI tests
@@ -534,7 +534,7 @@ test_loadcsv_CPPFLAGS = \
 			-I$(abs_top_srcdir)/src/persist \
 			-I$(abs_top_srcdir)/src/db
 
-test_loadcsv_LDFLAGS =	-ltntdb ${CXXTOOLS_LIBS} ${LIBCZMQ_LIBS} ${LIBMLM_LIBS} 
+test_loadcsv_LDFLAGS =	-ltntdb ${CXXTOOLS_LIBS} ${LIBCZMQ_LIBS}
 
 
 cibin_programs += 	test-db2
@@ -666,7 +666,7 @@ bios_csv_CPPFLAGS = \
 
 bios_csv_LDADD = libpriv-utils.la
 bios_csv_LDFLAGS = \
-						 ${CXXTOOLS_LIBS} -ltntdb ${LIBCZMQ_LIBS} ${LIBMLM_LIBS} 
+						 ${CXXTOOLS_LIBS} -ltntdb ${LIBCZMQ_LIBS}
 
 #XXX: $(localstatedir) did not worked
 #FIXME: installing things to /var is not a good idea according FHS or GNU standards
