@@ -267,7 +267,12 @@ std::string getJsonAsset(mlm_client_t * clientMlm, int64_t elemId)
   json += "]";
 
   // Device is special element with more attributes
-  if (tmp.item.basic.type_id == persist::asset_type::DEVICE)
+  if (tmp.item.basic.type_id == persist::asset_type::DEVICE && 
+        tmp.item.basic.subtype_id != persist::asset_subtype::GENSET && 
+        tmp.item.basic.subtype_id != persist::asset_subtype::SENSOR && 
+        tmp.item.basic.subtype_id != persist::asset_subtype::GPO && 
+        tmp.item.basic.subtype_id != persist::asset_subtype::FEED && 
+        tmp.item.basic.subtype_id != persist::asset_subtype::SENSORGPIO )
   {
     json += ", \"powers\": [";
 
